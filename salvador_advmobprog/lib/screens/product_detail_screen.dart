@@ -2,11 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/product.dart';
+import '../services/cart_service.dart';
+import '../services/user_service.dart';
 
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
   const ProductDetailScreen({super.key, required this.product});
+
+  @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  final CartService _cartService = CartService();
+  final UserService _userService = UserService();
+  int _quantity = 1;
+  bool _isAdding = false;
+
+  Future<void> _addToCart() async {
+    setState(() => _isAdding = true);
+    try {
+      final user = await _userService.getUser();
+      await _cartService.addToCart(
+        productId: widget.product.id,
+        quantity: _quantity,
+        userId: user.id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${widget.product.title} added to cart')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not add item to cart: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isAdding = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +58,7 @@ class ProductDetailScreen extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(16.r),
                 child: Image.network(
-                  product.thumbnail,
+                  widget.product.thumbnail,
                   width: double.infinity,
                   height: 260.h,
                   fit: BoxFit.cover,
@@ -37,7 +72,7 @@ class ProductDetailScreen extends StatelessWidget {
               ),
               SizedBox(height: 16.h),
               Text(
-                product.title,
+                widget.product.title,
                 style: TextStyle(
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
@@ -53,7 +88,7 @@ class ProductDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      product.category,
+                      widget.product.category,
                       style: TextStyle(
                         color: Colors.blue.shade800,
                         fontSize: 12.sp,
@@ -65,14 +100,14 @@ class ProductDetailScreen extends StatelessWidget {
                   Icon(Icons.star, color: Colors.amber, size: 18.sp),
                   SizedBox(width: 4.w),
                   Text(
-                    product.rating.toStringAsFixed(1),
+                    widget.product.rating.toStringAsFixed(1),
                     style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
               SizedBox(height: 12.h),
               Text(
-                '\$${product.price.toStringAsFixed(2)}',
+                '\$${widget.product.price.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 28.sp,
                   fontWeight: FontWeight.w800,
@@ -89,15 +124,15 @@ class ProductDetailScreen extends StatelessWidget {
               ),
               SizedBox(height: 8.h),
               Text(
-                product.description,
+                widget.product.description,
                 style: TextStyle(fontSize: 15.sp, height: 1.5),
               ),
               SizedBox(height: 20.h),
-              _InfoRow(label: 'Brand', value: product.brand),
-              _InfoRow(label: 'Stock', value: '${product.stock} available'),
-              _InfoRow(label: 'Shipping', value: product.shippingInformation),
-              _InfoRow(label: 'Warranty', value: product.warrantyInformation),
-              if (product.tags.isNotEmpty) ...[
+              _InfoRow(label: 'Brand', value: widget.product.brand),
+              _InfoRow(label: 'Stock', value: '${widget.product.stock} available'),
+              _InfoRow(label: 'Shipping', value: widget.product.shippingInformation),
+              _InfoRow(label: 'Warranty', value: widget.product.warrantyInformation),
+              if (widget.product.tags.isNotEmpty) ...[
                 SizedBox(height: 16.h),
                 Text(
                   'Tags',
@@ -110,7 +145,7 @@ class ProductDetailScreen extends StatelessWidget {
                 Wrap(
                   spacing: 8.w,
                   runSpacing: 8.h,
-                  children: product.tags
+                    children: widget.product.tags
                       .map(
                         (tag) => Chip(
                           label: Text(tag),
@@ -120,6 +155,38 @@ class ProductDetailScreen extends StatelessWidget {
                       .toList(),
                 ),
               ],
+              SizedBox(height: 24.h),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: _quantity == 1 || _isAdding
+                        ? null
+                        : () => setState(() => _quantity--),
+                    icon: const Icon(Icons.remove),
+                  ),
+                  Text('$_quantity', style: TextStyle(fontSize: 16.sp)),
+                  IconButton(
+                    onPressed: _isAdding
+                        ? null
+                        : () => setState(() => _quantity++),
+                    icon: const Icon(Icons.add),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isAdding ? null : _addToCart,
+                      icon: _isAdding
+                          ? SizedBox(
+                              width: 16.w,
+                              height: 16.w,
+                              child: const CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.shopping_cart_outlined),
+                      label: Text(_isAdding ? 'Adding...' : 'Add to cart'),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
