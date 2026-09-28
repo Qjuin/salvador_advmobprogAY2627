@@ -45,3 +45,13 @@ app.*.map.json
 /android/app/release
 
 salvador_mobile/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+salvador_advmobprog/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
