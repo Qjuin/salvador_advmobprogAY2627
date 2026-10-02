@@ -12,7 +12,6 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  
   final _fNameController = TextEditingController();
   final _lNameController = TextEditingController();
   final _ageController = TextEditingController();
@@ -43,6 +42,11 @@ class _SignupScreenState extends State<SignupScreen> {
       await createAccount(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        firstName: _fNameController.text.trim(),
+        lastName: _lNameController.text.trim(),
+        username: _usernameController.text.trim(),
+        age: _ageController.text.trim(),
+        contactNo: _contactNoController.text.trim(),
       );
       
       await updateUsername(username: _usernameController.text.trim());

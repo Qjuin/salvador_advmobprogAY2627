@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../constants.dart';
-import '../models/user.dart' as model; // Added alias here
+import '../models/user.dart' as model;
 
 ValueNotifier<UserService> userService = ValueNotifier(UserService());
 
@@ -32,11 +33,9 @@ class UserService {
   }
 
   // Save User Data to SharedPreferences
-  // Save user data from API response based on user model
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Updated to use the alias
     final user = model.User.fromJson(userData);
 
     await prefs.setInt('id', user.id);
@@ -49,7 +48,6 @@ class UserService {
     await prefs.setString('accessToken', user.accessToken);
     await prefs.setString('refreshToken', user.refreshToken);
 
-    // Support both token and accessToken in API response
     if (userData.containsKey('token')) {
       await prefs.setString('token', userData['token'] ?? '');
     } else if (user.accessToken.isNotEmpty) {
@@ -76,10 +74,8 @@ class UserService {
   }
 
   // Return user object from SharedPreferences
-  // Updated to use the alias
   Future<model.User> getUser() async {
     final userData = await getUserData();
-    // Updated to use the alias
     return model.User.fromJson(userData);
   }
 
@@ -102,8 +98,9 @@ class UserService {
 }
 
 // Global Firebase Auth Variables & Helper Functions
-// These now safely use the Firebase 'User' class
 final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
 User? get currentUser => firebaseAuth.currentUser;
 Stream<User?> get authStateChanges => firebaseAuth.authStateChanges();
 
@@ -120,11 +117,33 @@ Future<UserCredential> signIn({
 Future<UserCredential> createAccount({
   required String email,
   required String password,
+  required String firstName,
+  required String lastName,
+  required String username,
+  required String age,
+  required String contactNo,
 }) async {
-  return await firebaseAuth.createUserWithEmailAndPassword(
+  // 1. Create user in Firebase Auth
+  UserCredential credential = await firebaseAuth.createUserWithEmailAndPassword(
     email: email,
     password: password,
   );
+
+  final uid = credential.user!.uid;
+
+  // 2. Save user profile into Firestore "Users" collection
+  await firestore.collection('Users').doc(uid).set({
+    'uid': uid,
+    'email': email,
+    'firstName': firstName,
+    'lastName': lastName,
+    'username': username,
+    'age': age,
+    'contactNo': contactNo,
+    'createdAt': Timestamp.now(),
+  });
+
+  return credential;
 }
 
 Future<void> signOut() async {
